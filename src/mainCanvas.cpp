@@ -6,7 +6,7 @@
 M5Terminal terminal;
 
 void setup() {
-    M5Cardputer.begin(true);
+    // M5Cardputer.begin(true);
     Serial.begin(115200);
     terminal.begin();
     terminal.clear();
@@ -21,11 +21,11 @@ void loop() {
         counter++;
         delay(1000);
     }
-    if (M5Cardputer.Keyboard.isKeyPressed(';')) {
-        // canvas.println("------>passou por aqui<-------");
-        // delay(2000);
-        terminal.print(";");
-    }
-    M5Cardputer.update();
+    // if (M5Cardputer.Keyboard.isKeyPressed(';')) {
+    //     // canvas.println("------>passou por aqui<-------");
+    //     // delay(2000);
+    //     terminal.print(";");
+    // }
+    // M5Cardputer.update();
     delay(200);
 }

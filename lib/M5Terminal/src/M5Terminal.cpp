@@ -1,95 +1,72 @@
 #include "M5Terminal.h"
 
-M5Terminal::M5Terminal()
-    : display(), canvas(&display), currentLine(0), displayStartLine(0), cursorX(0), cursorY(0), lineHeight(10) {
-    // Configuração inicial
-    display.begin();  // Inicializa o display
-
-    if (display.isEPD()) {
-        display.setEpdMode(epd_mode_t::epd_fastest);
-        display.invertDisplay(true);
-        display.clear(TFT_BLACK);
+M5Terminal::M5Terminal() : bufferIndex(0), startLine(0), lineHeight(20), canvas(&display) {
+    for (int i = 0; i < 100; i++) {
+        buffer[i] = "";  // Inicializa o buffer com linhas vazias
     }
-    if (display.width() < display.height()) {
-        display.setRotation(display.getRotation() ^ 1);
-    }
-
-    canvas.setColorDepth(1);  // mono color
-    canvas.createSprite(display.width(), display.height());
-    canvas.setTextFont(&fonts::DejaVu9);
-
-    canvas.setTextScroll(true);
 }
 
-// Implementar os métodos de M5Terminal aqui
+void M5Terminal::begin() {
+    display.begin();
+    display.setRotation(1);
+    display.fillScreen(TFT_BLACK);
+    display.setTextColor(TFT_WHITE, TFT_BLACK);
+    display.setTextSize(2);
+    canvas.createSprite(display.width(), display.height());
+    canvas.fillSprite(TFT_BLACK);
+    canvas.setTextColor(TFT_GREEN, TFT_BLACK);
+    canvas.setTextFont(&fonts::DejaVu12);
+}
+
 void M5Terminal::print(const char* text) {
-    wrapText(text);
-    updateDisplay();
+    buffer[bufferIndex] += text;
+    updateCanvas();
 }
 
 void M5Terminal::println(const char* text) {
-    print(text);
-    newLine();
-}
-
-void M5Terminal::printf(const char* format, ...) {
-    char buffer[MAX_LINE_LENGTH];
-    va_list args;
-    va_start(args, format);
-    vsnprintf(buffer, sizeof(buffer), format, args);
-    va_end(args);
-    print(buffer);
-}
-
-void M5Terminal::scrollUp() {
-    if (displayStartLine > 0) {
-        displayStartLine--;
-        updateDisplay();
+    // Adiciona o texto e pula para a próxima linha do buffer
+    buffer[bufferIndex] += text;
+    bufferIndex++;
+    // bufferIndex = (bufferIndex + 1) % 100;
+    if (bufferIndex > 6) {
+        scrollUp();  // Rolagem para cima se o buffer estiver cheio
     }
-}
-
-void M5Terminal::scrollDown() {
-    if (displayStartLine < MAX_LINES - 1) {
-        displayStartLine++;
-        updateDisplay();
-    }
+    // Atualiza o canvas para refletir as mudanças
+    updateCanvas();
 }
 
 void M5Terminal::clear() {
-    for (int i = 0; i < MAX_LINES; i++) {
-        lineBuffer[i] = "";
+    canvas.fillSprite(TFT_BLACK);
+    bufferIndex = 0;
+    startLine = 0;
+    // Limpa o buffer
+    for (int i = 0; i < 100; i++) {
+        buffer[i] = "";
     }
-    currentLine = 0;
-    displayStartLine = 0;
-    updateDisplay();
+    updateCanvas();
 }
 
-void M5Terminal::updateDisplay() {
-    canvas.fillScreen(BLACK);  // Limpa a tela
-    for (int i = 0; i < MAX_LINES; i++) {
-        int lineIndex = (displayStartLine + i) % MAX_LINES;
-        canvas.setCursor(cursorX, cursorY + i * lineHeight);
-        canvas.print(lineBuffer[lineIndex]);
-    }
-    canvas.pushSprite(0, 0);  // Atualiza a tela
+void M5Terminal::scrollUp() {
+    startLine = (startLine + 1) % 100;
+    updateCanvas();
 }
 
-void M5Terminal::newLine() {
-    currentLine++;
-    if (currentLine >= MAX_LINES) {
-        currentLine = MAX_LINES - 1;
-        scrollUp();
-    }
+void M5Terminal::scrollDown() {
+    startLine = (startLine - 1 + 100) % 100;
+    updateCanvas();
 }
 
-void M5Terminal::wrapText(const char* text) {
-    String inputText = String(text);
-    int length = inputText.length();
-    int index = 0;
-    while (index < length) {
-        int lineLength = min(MAX_LINE_LENGTH, length - index);
-        lineBuffer[currentLine] = inputText.substring(index, index + lineLength);
-        newLine();
-        index += lineLength;
+void M5Terminal::updateCanvas() {
+    canvas.fillSprite(TFT_BLACK);
+    int line = startLine;
+    int y = 0;  // Inicializa a posição vertical para o texto
+
+    for (int i = 0; i < 7; i++) {
+        if (buffer[line].length() > 0) {
+            canvas.drawString(buffer[line], 0, y);
+        }
+        line = (line + 1) % 100;
+        y += lineHeight;  // Atualiza a posição vertical para a próxima linha
     }
+    canvas.pushSprite(0, 0);
 }

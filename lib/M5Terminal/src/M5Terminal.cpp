@@ -67,6 +67,7 @@ String M5Terminal::sendInput() {
 
 void M5Terminal::clearinput() {
     _inBuffer.clear();
+    _inBuffer.push_back(">");
     _scrollX = 0;
     updateCanvas();
 }

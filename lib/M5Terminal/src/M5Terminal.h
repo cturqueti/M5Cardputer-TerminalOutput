@@ -1,11 +1,17 @@
 #ifndef M5TERMINAL_H
 #define M5TERMINAL_H
 
-#include <M5GFX.h>
+#include <M5Cardputer.h>
+
+#include <deque>
+#include <string>
+
+// Verifique o tipo correto, pode ser M5GFX ou outro tipo apropriado
+typedef M5GFX M5Display;  // Ajuste conforme necessário
 
 class M5Terminal {
    public:
-    M5Terminal();
+    M5Terminal(M5Display* display);
     void begin();
     void print(const char* text);
     void println(const char* text);
@@ -14,13 +20,14 @@ class M5Terminal {
     void scrollDown();
 
    private:
-    M5GFX display;
-    M5Canvas canvas;
-    String buffer[100];
-    int bufferIndex;
-    int startLine;
-    int lineHeight;
+    M5Display* _display;  // Ajuste para M5Display
+    M5Canvas* _canvas;
+    std::deque<std::string> _buffer;
+    int _maxLines = 100;
+    int _lineHeight;
+    int _startLine;
     void updateCanvas();
+    void autoScroll();
 };
 
 #endif  // M5TERMINAL_H

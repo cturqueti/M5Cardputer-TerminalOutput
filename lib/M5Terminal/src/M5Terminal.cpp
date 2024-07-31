@@ -1,72 +1,92 @@
 #include "M5Terminal.h"
 
-M5Terminal::M5Terminal() : bufferIndex(0), startLine(0), lineHeight(20), canvas(&display) {
-    for (int i = 0; i < 100; i++) {
-        buffer[i] = "";  // Inicializa o buffer com linhas vazias
+M5Terminal::M5Terminal(M5Display* display) : _display(display), _startLine(0), _lineHeight(12) {
+    _display->setRotation(1);
+    if (_display->isEPD()) {
+        _display->setEpdMode(epd_mode_t::epd_fastest);
+        _display->invertDisplay(true);
+        _display->clear(TFT_BLACK);
     }
+    if (_display->width() < _display->height()) {
+        _display->setRotation(_display->getRotation() ^ 1);
+    }
+    _canvas = new M5Canvas(_display);
 }
 
 void M5Terminal::begin() {
-    display.begin();
-    display.setRotation(1);
-    display.fillScreen(TFT_BLACK);
-    display.setTextColor(TFT_WHITE, TFT_BLACK);
-    display.setTextSize(2);
-    canvas.createSprite(display.width(), display.height());
-    canvas.fillSprite(TFT_BLACK);
-    canvas.setTextColor(TFT_GREEN, TFT_BLACK);
-    canvas.setTextFont(&fonts::DejaVu12);
+    _canvas->setColorDepth(1);  // mono color
+    _canvas->createSprite(_display->width(), _display->height());
+    _canvas->setTextFont(&fonts::DejaVu12);
+    //_canvas->setTextColor(TFT_GREEN);
+    _canvas->setTextScroll(true);
+
+    clear();
 }
 
-void M5Terminal::print(const char* text) {
-    buffer[bufferIndex] += text;
+void M5Terminal::print(const char* str) {
+    if (_buffer.size() >= _maxLines) {
+        _buffer.pop_front();
+    }
+
+    if (_buffer.empty()) {
+        _buffer.push_back(std::string(str));
+    } else {
+        _buffer.back() += std::string(str);
+    }
+
     updateCanvas();
 }
 
-void M5Terminal::println(const char* text) {
-    // Adiciona o texto e pula para a próxima linha do buffer
-    buffer[bufferIndex] += text;
-    bufferIndex++;
-    // bufferIndex = (bufferIndex + 1) % 100;
-    if (bufferIndex > 6) {
-        scrollUp();  // Rolagem para cima se o buffer estiver cheio
+void M5Terminal::println(const char* str) {
+    print(str);
+    if (_buffer.size() >= _maxLines) {
+        _buffer.pop_front();
     }
-    // Atualiza o canvas para refletir as mudanças
+    _buffer.push_back("");
+    autoScroll();
     updateCanvas();
 }
 
 void M5Terminal::clear() {
-    canvas.fillSprite(TFT_BLACK);
-    bufferIndex = 0;
-    startLine = 0;
-    // Limpa o buffer
-    for (int i = 0; i < 100; i++) {
-        buffer[i] = "";
-    }
+    _buffer.clear();
     updateCanvas();
 }
 
 void M5Terminal::scrollUp() {
-    startLine = (startLine + 1) % 100;
-    updateCanvas();
+    if (_startLine > 0) {
+        _startLine--;
+        updateCanvas();
+    }
 }
 
 void M5Terminal::scrollDown() {
-    startLine = (startLine - 1 + 100) % 100;
-    updateCanvas();
+    if (_startLine < _buffer.size() - 1) {
+        _startLine++;
+        updateCanvas();
+    }
+}
+
+void M5Terminal::autoScroll() {
+    int numVisibleLines = _canvas->height() / _lineHeight;
+    if (_buffer.size() > numVisibleLines) {
+        _startLine = _buffer.size() - numVisibleLines;
+    }
 }
 
 void M5Terminal::updateCanvas() {
-    canvas.fillSprite(TFT_BLACK);
-    int line = startLine;
-    int y = 0;  // Inicializa a posição vertical para o texto
+    _canvas->fillScreen(TFT_BLACK);
+    int line = _startLine;
+    int y = 0;
 
-    for (int i = 0; i < 7; i++) {
-        if (buffer[line].length() > 0) {
-            canvas.drawString(buffer[line], 0, y);
+    int numVisibleLines = _canvas->height() / _lineHeight;
+
+    for (int i = 0; i < numVisibleLines && line < _buffer.size(); i++) {
+        if (_buffer[line].length() > 0) {
+            _canvas->drawString(_buffer[line].c_str(), 0, y);
         }
-        line = (line + 1) % 100;
-        y += lineHeight;  // Atualiza a posição vertical para a próxima linha
+        line++;
+        y += _lineHeight;
     }
-    canvas.pushSprite(0, 0);
+
+    _canvas->pushSprite(0, 0);
 }

@@ -3,10 +3,12 @@
 
 #include "M5Terminal.h"
 
-M5Terminal terminal;
+M5Terminal terminal(&M5Cardputer.Display);
 
 void setup() {
-    // M5Cardputer.begin(true);
+    auto cfg = M5.config();
+    M5Cardputer.begin(cfg);
+
     Serial.begin(115200);
     terminal.begin();
     terminal.clear();

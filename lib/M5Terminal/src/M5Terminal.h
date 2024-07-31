@@ -1,3 +1,4 @@
+
 #ifndef M5TERMINAL_H
 #define M5TERMINAL_H
 
@@ -6,8 +7,10 @@
 #include <deque>
 #include <string>
 
-// Verifique o tipo correto, pode ser M5GFX ou outro tipo apropriado
-typedef M5GFX M5Display;  // Ajuste conforme necessário
+#include "Color.h"
+
+// Verify the correct type; it might be M5GFX or another appropriate type
+typedef M5GFX M5Display;  // Adjust as necessary
 
 class M5Terminal {
    public:
@@ -20,17 +23,24 @@ class M5Terminal {
     void scrollDown();
     void scrollLeft();
     void scrollRight();
+    void drawFrame();
+    void updateCanvas();
+
+    String inBuffer;
 
    private:
-    M5Display* _display;  // Ajuste para M5Display
+    M5Display* _display;  // Adjust to M5Display
     M5Canvas* _canvas;
-    std::deque<std::string> _buffer;
+    std::deque<std::string> _outBuffer;
+    std::deque<std::string> _inBuffer;
     int _maxLines = 100;
     int _lineHeight;
     int _startLine;
     int _scrollX = 0;
-    void updateCanvas();
+    void updateOutputWindow();
+    void updateInputWindow();
     void autoScroll();
+    void drawScrollIndicator();
 };
 
 #endif  // M5TERMINAL_H

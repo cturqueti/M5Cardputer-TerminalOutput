@@ -56,6 +56,32 @@ void M5Terminal::refreshInput(const char* text) {
     updateCanvas();
 }
 
+String M5Terminal::sendInput() {
+    String output = _inBuffer.front().c_str();
+    if (!_inBuffer.empty()) {
+        clearinput();
+        return output;
+    }
+    return "";
+}
+
+void M5Terminal::clearinput() {
+    _inBuffer.clear();
+    _scrollX = 0;
+    updateCanvas();
+}
+void M5Terminal::backSpaceInput() {
+    if (!_inBuffer.empty()) {
+        if (!_inBuffer.back().empty()) {
+            _inBuffer.back().pop_back();
+        }
+        if (_inBuffer.back().empty()) {
+            _inBuffer.pop_back();
+        }
+        updateCanvas();
+    }
+}
+
 void M5Terminal::clear() {
     _outBuffer.clear();
     _scrollX = 0;
@@ -119,7 +145,11 @@ void M5Terminal::updateInputWindow() {
     // Calculate the bottom line Y position of the display
     int y = _canvas->height() - _lineHeight;
 
-    _canvas->drawString(_inBuffer[0].c_str(), leftMargin - _scrollX, y);
+    if (!_inBuffer.empty()) {
+        _canvas->drawString(_inBuffer[0].c_str(), leftMargin - _scrollX, y);
+    } else {
+        _canvas->drawString("", leftMargin - _scrollX, y);  // Desenha uma string vazia se _inBuffer estiver vazio
+    }
 }
 
 void M5Terminal::updateOutputWindow() {

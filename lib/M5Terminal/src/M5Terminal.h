@@ -19,6 +19,9 @@ class M5Terminal {
     void print(const char* text);
     void println(const char* text);
     void refreshInput(const char* text);
+    String sendInput();
+    void clearinput();
+    void backSpaceInput();
     void clear();
     void scrollUp();
     void scrollDown();
@@ -26,8 +29,6 @@ class M5Terminal {
     void scrollRight();
     void drawFrame();
     void updateCanvas();
-
-    String inBuffer;
 
    private:
     M5Display* _display;  // Adjust to M5Display
@@ -40,6 +41,7 @@ class M5Terminal {
     int _scrollX = 0;
     void updateOutputWindow();
     void updateInputWindow();
+
     void autoScroll();
     void drawScrollIndicator();
 };

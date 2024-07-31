@@ -42,8 +42,16 @@ void loop() {
                 fnFlag = !fnFlag;
                 delay(50);
 
+            } else if (status.enter) {
+                terminal.print("Enviando:");
+                String output = terminal.sendInput();
+                terminal.println(output.c_str());
+
+            } else if (status.del) {
+                terminal.backSpaceInput();
             } else if (!fnFlag) {
                 for (auto key : status.word) {
+                    terminal.refreshInput(String(key).c_str());
                     userInput += key;
                 }
             }

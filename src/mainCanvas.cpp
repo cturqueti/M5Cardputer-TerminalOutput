@@ -3,6 +3,11 @@
 
 #include "M5Terminal.h"
 
+#define KEY_UP ';'
+#define KEY_DOWN '.'
+#define KEY_LEFT ','
+#define KEY_RIGHT '/'
+
 M5Terminal terminal(&M5Cardputer.Display);
 
 void setup() {
@@ -21,13 +26,21 @@ void loop() {
         terminal.print("Contador: ");
         terminal.println(String(counter).c_str());
         counter++;
-        delay(1000);
+        if (counter == 29) {
+            terminal.println("testando o tamanho da linha e o left e right");
+        }
+        delay(100);
     }
-    // if (M5Cardputer.Keyboard.isKeyPressed(';')) {
-    //     // canvas.println("------>passou por aqui<-------");
-    //     // delay(2000);
-    //     terminal.print(";");
-    // }
-    // M5Cardputer.update();
-    delay(200);
+    if (M5Cardputer.Keyboard.isKeyPressed(KEY_FN) && M5Cardputer.Keyboard.isKeyPressed(KEY_UP)) {
+        terminal.scrollUp();
+
+    } else if (M5Cardputer.Keyboard.isKeyPressed(KEY_FN) && M5Cardputer.Keyboard.isKeyPressed(KEY_DOWN)) {
+        terminal.scrollDown();
+    } else if (M5Cardputer.Keyboard.isKeyPressed(KEY_FN) && M5Cardputer.Keyboard.isKeyPressed(KEY_LEFT)) {
+        terminal.scrollLeft();
+    } else if (M5Cardputer.Keyboard.isKeyPressed(KEY_FN) && M5Cardputer.Keyboard.isKeyPressed(KEY_RIGHT)) {
+        terminal.scrollRight();
+    }
+    M5Cardputer.update();
+    delay(50);
 }

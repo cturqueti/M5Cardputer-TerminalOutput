@@ -14,8 +14,10 @@ M5Terminal::M5Terminal(M5Display* display) : _display(display), _startLine(0), _
 }
 
 void M5Terminal::begin() {
-    _canvas->setColorDepth(1);  // mono color
+    // _canvas->setColorDepth(1);  // mono color
+    _canvas->fillSprite(TFT_BLACK);
     _canvas->createSprite(_display->width(), _display->height());
+    _canvas->setTextColor(TFT_GREEN, TFT_BLACK);
     _canvas->setTextFont(&fonts::DejaVu12);
     //_canvas->setTextColor(TFT_GREEN);
     _canvas->setTextScroll(true);
@@ -66,6 +68,23 @@ void M5Terminal::scrollDown() {
     }
 }
 
+void M5Terminal::scrollLeft() {
+    if (_scrollX > 0) {
+        _scrollX -= 5;
+        updateCanvas();
+    } else if (_scrollX < 0) {
+        _scrollX = 0;
+    }
+}
+
+void M5Terminal::scrollRight() {
+    int maxScrollX = _canvas->width() - _canvas->textWidth(" ");  // Ajuste conforme necessário
+    if (_scrollX < maxScrollX) {
+        _scrollX += 5;
+        updateCanvas();
+    }
+}
+
 void M5Terminal::autoScroll() {
     int numVisibleLines = _canvas->height() / _lineHeight;
     if (_buffer.size() > numVisibleLines) {
@@ -82,7 +101,7 @@ void M5Terminal::updateCanvas() {
 
     for (int i = 0; i < numVisibleLines && line < _buffer.size(); i++) {
         if (_buffer[line].length() > 0) {
-            _canvas->drawString(_buffer[line].c_str(), 0, y);
+            _canvas->drawString(_buffer[line].c_str(), -_scrollX, y);  // Aplicar rolagem horizontal
         }
         line++;
         y += _lineHeight;

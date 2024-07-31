@@ -18,6 +18,8 @@ class M5Terminal {
     void clear();
     void scrollUp();
     void scrollDown();
+    void scrollLeft();
+    void scrollRight();
 
    private:
     M5Display* _display;  // Ajuste para M5Display
@@ -26,6 +28,7 @@ class M5Terminal {
     int _maxLines = 100;
     int _lineHeight;
     int _startLine;
+    int _scrollX = 0;
     void updateCanvas();
     void autoScroll();
 };

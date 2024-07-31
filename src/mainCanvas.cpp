@@ -74,15 +74,3 @@ void loop() {
     M5Cardputer.update();
     delay(50);
 }
-
-void handleBackspace() {
-    // Check if there is text to delete
-    if (userInput.length() > 2) {  // "> " length is 2
-        // Remove the last character from userInput
-        userInput.remove(userInput.length() - 1);
-        M5Cardputer.Display.fillScreen(BLACK);
-
-        // Display updated user input
-        // displayUserInput();
-    }
-}

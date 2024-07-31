@@ -18,6 +18,7 @@ class M5Terminal {
     void begin();
     void print(const char* text);
     void println(const char* text);
+    void refreshInput(const char* text);
     void clear();
     void scrollUp();
     void scrollDown();

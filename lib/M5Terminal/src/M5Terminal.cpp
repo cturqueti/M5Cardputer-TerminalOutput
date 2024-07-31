@@ -47,6 +47,15 @@ void M5Terminal::println(const char* text) {
     updateCanvas();
 }
 
+void M5Terminal::refreshInput(const char* text) {
+    if (_inBuffer.empty()) {
+        _inBuffer.push_back(std::string(text));
+    } else {
+        _inBuffer.back() += std::string(text);
+    }
+    updateCanvas();
+}
+
 void M5Terminal::clear() {
     _outBuffer.clear();
     _scrollX = 0;
@@ -105,6 +114,12 @@ void M5Terminal::updateCanvas() {
 }
 
 void M5Terminal::updateInputWindow() {
+    const int leftMargin = 5;
+
+    // Calculate the bottom line Y position of the display
+    int y = _canvas->height() - _lineHeight;
+
+    _canvas->drawString(_inBuffer[0].c_str(), leftMargin - _scrollX, y);
 }
 
 void M5Terminal::updateOutputWindow() {

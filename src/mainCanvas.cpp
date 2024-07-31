@@ -33,7 +33,6 @@ void loop() {
     }
     if (M5Cardputer.Keyboard.isKeyPressed(KEY_FN) && M5Cardputer.Keyboard.isKeyPressed(KEY_UP)) {
         terminal.scrollUp();
-
     } else if (M5Cardputer.Keyboard.isKeyPressed(KEY_FN) && M5Cardputer.Keyboard.isKeyPressed(KEY_DOWN)) {
         terminal.scrollDown();
     } else if (M5Cardputer.Keyboard.isKeyPressed(KEY_FN) && M5Cardputer.Keyboard.isKeyPressed(KEY_LEFT)) {

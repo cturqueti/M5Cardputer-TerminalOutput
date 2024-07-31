@@ -57,9 +57,13 @@ void M5Terminal::refreshInput(const char* text) {
 }
 
 String M5Terminal::sendInput() {
-    String output = _inBuffer.front().c_str();
     if (!_inBuffer.empty()) {
+        String output = _inBuffer.front().c_str();
         clearinput();
+        // Remove o primeiro caractere
+        if (output.length() > 0) {
+            output = output.substring(1);
+        }
         return output;
     }
     return "";
@@ -149,7 +153,7 @@ void M5Terminal::updateInputWindow() {
     if (!_inBuffer.empty()) {
         _canvas->drawString(_inBuffer[0].c_str(), leftMargin - _scrollX, y);
     } else {
-        _canvas->drawString("", leftMargin - _scrollX, y);  // Desenha uma string vazia se _inBuffer estiver vazio
+        _inBuffer.push_back(">");
     }
 }
 

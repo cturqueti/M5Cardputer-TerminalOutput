@@ -34,6 +34,7 @@ class M5Terminal {
     void scrollRight();
     void drawFrame();
     void updateCanvas();
+    void handleKeyboardInput();
 
    private:
     M5Display* _display;  // Adjust to M5Display
@@ -44,11 +45,20 @@ class M5Terminal {
     int _lineHeight;
     int _startLine;
     int _scrollX = 0;
+    bool _fnFlag = false;
+    bool _capsFlag = false;
+    bool _ctrlFlag = false;
+    uint16_t _textColor = Color::toRgb565(50, 255, 50);
+    uint16_t _backgroundColor = Color::toRgb565(0, 0, 0);
+    uint16_t _borderColor = Color::toRgb565(192, 192, 192);
+    uint16_t _scrollColor = Color::toRgb565(0, 200, 150);
+    SemaphoreHandle_t _canvasMutex;
+
     void updateOutputWindow();
     void updateInputWindow();
-
     void autoScroll();
     void drawScrollIndicator();
+    void drawFnIndicator();
 };
 
 #endif  // M5TERMINAL_H

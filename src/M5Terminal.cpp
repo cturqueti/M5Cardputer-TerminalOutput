@@ -5,18 +5,23 @@ M5Terminal::M5Terminal(M5Display* display) : _display(display), _startLine(0), _
     if (_display->isEPD()) {
         _display->setEpdMode(epd_mode_t::epd_fastest);
         _display->invertDisplay(true);
-        _display->clear(TFT_BLACK);
+        _display->clear(_backgroundColor);
     }
     if (_display->width() < _display->height()) {
         _display->setRotation(_display->getRotation() ^ 1);
     }
     _canvas = new M5Canvas(_display);
+    _canvasMutex = xSemaphoreCreateMutex();  // Create a mutex
+    if (_canvasMutex == NULL) {
+        Serial.println("Failed to create mutex");
+        // Handle the error
+    }
 }
 
 void M5Terminal::begin() {
-    _canvas->fillSprite(TFT_BLACK);
+    _canvas->fillSprite(_backgroundColor);
     _canvas->createSprite(_display->width(), _display->height());
-    _canvas->setTextColor(Color::toRgb565(50, 255, 50), TFT_BLACK);
+    _canvas->setTextColor(_textColor, _backgroundColor);
     _canvas->setFont(&fonts::DejaVu12);
     _canvas->setTextScroll(true);
 
@@ -139,6 +144,7 @@ void M5Terminal::updateCanvas() {
     _canvas->fillScreen(TFT_BLACK);
     updateOutputWindow();
     updateInputWindow();
+    drawFnIndicator();
     drawFrame();
 
     _canvas->pushSprite(0, 0);
@@ -175,13 +181,11 @@ void M5Terminal::updateOutputWindow() {
 }
 
 void M5Terminal::drawFrame() {
-    const uint16_t WHITE = Color::toRgb565(192, 192, 192);  // Cor branca no formato RGB565
-
     // Desenhar a moldura ao redor da área de saída de texto
-    _canvas->drawRect(0, 0, _canvas->width(), _canvas->height() - _lineHeight, WHITE);
+    _canvas->drawRect(0, 0, _canvas->width(), _canvas->height() - _lineHeight, _borderColor);
 
     // Desenhar uma linha separadora entre a área de saída de texto e a linha de entrada de texto
-    _canvas->drawLine(0, _canvas->height() - _lineHeight, _canvas->width(), _canvas->height() - _lineHeight, WHITE);
+    _canvas->drawLine(0, _canvas->height() - _lineHeight, _canvas->width(), _canvas->height() - _lineHeight, _borderColor);
 }
 
 void M5Terminal::drawScrollIndicator() {
@@ -199,9 +203,72 @@ void M5Terminal::drawScrollIndicator() {
     _canvas->fillRect(_canvas->width() - 5, 0, 5, _canvas->height() - _lineHeight, TFT_BLACK);
 
     // Draw the scroll bar
-    _canvas->fillRect(_canvas->width() - 5, indicatorY, 5, indicatorHeight, Color::toRgb565(0, 200, 150));
+    _canvas->fillRect(_canvas->width() - 5, indicatorY, 5, indicatorHeight, _scrollColor);
 
     // Add a border for visibility
-    _canvas->drawRect(_canvas->width() - 5, 0, 5, _canvas->height() - _lineHeight, Color::toRgb565(150, 150, 150));
+    _canvas->drawRect(_canvas->width() - 5, 0, 5, _canvas->height() - _lineHeight, _borderColor);
     _canvas->drawRect(_canvas->width() - 5, indicatorY, 5, indicatorHeight, Color::toRgb565(0, 150, 150));
+}
+
+void M5Terminal::handleKeyboardInput() {
+    if (M5Cardputer.Keyboard.isChange()) {
+        if (M5Cardputer.Keyboard.isPressed()) {
+            Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
+            if (status.fn) {
+                _fnFlag = !_fnFlag;
+                delay(50);
+            } else if (status.enter) {
+                // Handle enter key
+                String output = sendInput();
+                println(output.c_str());
+            } else if (status.del) {
+                // Handle backspace/delete key
+                backSpaceInput();
+            } else if (!_fnFlag) {
+                // Handle other key presses
+                for (auto key : status.word) {
+                    refreshInput(String(key).c_str());
+                }
+            }
+        }
+        updateCanvas();
+    } else if (M5Cardputer.Keyboard.isPressed() && _fnFlag) {
+        Keyboard_Class::KeysState fn = M5Cardputer.Keyboard.keysState();
+        for (auto key : fn.word) {
+            if (key == KEY_UP) {
+                scrollUp();
+            } else if (key == KEY_DOWN) {
+                scrollDown();
+            } else if (key == KEY_LEFT) {
+                scrollLeft();
+            } else if (key == KEY_RIGHT) {
+                scrollRight();
+            }
+        }
+    }
+    M5Cardputer.update();
+    // updateCanvas();
+}
+
+void M5Terminal::drawFnIndicator() {
+    if (_fnFlag) {
+        // Define the position and size of the indicator
+        int indicatorWidth = 30;
+        int indicatorHeight = 15;
+        int x = _canvas->width() - indicatorWidth - 5;  // 5 pixels padding from the right edge
+        int y = 5;                                      // 5 pixels padding from the top edge
+
+        // Draw the background rectangle
+        _canvas->fillRect(x, y, indicatorWidth, indicatorHeight, TFT_ORANGE);
+
+        // Draw the border of the rectangle
+        _canvas->drawRect(x, y, indicatorWidth, indicatorHeight, TFT_WHITE);
+
+        // Draw the "FN" text inside the rectangle
+
+        _canvas->setTextColor(WHITE);
+        _canvas->setTextSize(1);
+        _canvas->drawString("FN", x + 5, y + 3);  // Position the text inside the rectangle
+        _canvas->setTextColor(_textColor);
+    }
 }

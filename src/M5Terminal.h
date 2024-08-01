@@ -14,6 +14,14 @@
 #define KEY_LEFT ','
 #define KEY_RIGHT '/'
 
+struct Flags {
+    uint8_t fnFlag : 1;     // 1 bit para fnFlag
+    uint8_t altFlag : 1;    // 1 bit para altFlag
+    uint8_t shiftFlag : 1;  // 1 bit para capsFlag
+    uint8_t ctrlFlag : 1;   //
+    uint8_t optFlag : 1;
+};
+
 // Verify the correct type; it might be M5GFX or another appropriate type
 typedef M5GFX M5Display;  // Adjust as necessary
 
@@ -45,7 +53,9 @@ class M5Terminal {
     int _lineHeight;
     int _startLine;
     int _scrollX = 0;
+    Flags _flags;
     bool _fnFlag = false;
+    bool _altFlag = false;
     bool _capsFlag = false;
     bool _ctrlFlag = false;
     uint16_t _textColor = Color::toRgb565(50, 255, 50);
@@ -54,11 +64,13 @@ class M5Terminal {
     uint16_t _scrollColor = Color::toRgb565(0, 200, 150);
     SemaphoreHandle_t _canvasMutex;
 
-    void updateOutputWindow();
+    void
+    updateOutputWindow();
     void updateInputWindow();
     void autoScroll();
     void drawScrollIndicator();
     void drawFnIndicator();
+    String toUpperCase(const String& str);
 };
 
 #endif  // M5TERMINAL_H

@@ -232,8 +232,42 @@ void M5Terminal::handleKeyboardInput() {
     if (M5Cardputer.Keyboard.isChange()) {
         if (M5Cardputer.Keyboard.isPressed()) {
             Keyboard_Class::KeysState status = M5Cardputer.Keyboard.keysState();
+            // std::vector<Point2D_t> _keyCoord = M5Cardputer.Keyboard.keyList();
             if (status.fn) {
-                _fnFlag = !_fnFlag;
+                _flags.fnFlag = !_flags.fnFlag;
+                _flags.altFlag = false;
+                _flags.shiftFlag = false;
+                _flags.optFlag = false;
+                _flags.ctrlFlag = false;
+                delay(50);
+            } else if (status.alt) {
+                _flags.fnFlag = false;
+                _flags.altFlag = !_flags.altFlag;
+                _flags.shiftFlag = false;
+                _flags.optFlag = false;
+                _flags.ctrlFlag = false;
+                delay(50);
+            } else if (status.shift) {
+                _flags.fnFlag = false;
+                _flags.altFlag = false;
+                _flags.shiftFlag = !_flags.shiftFlag;
+                M5Cardputer.Keyboard.setCapsLocked(_flags.shiftFlag);
+                _flags.optFlag = false;
+                _flags.ctrlFlag = false;
+                delay(50);
+            } else if (status.opt) {
+                _flags.fnFlag = false;
+                _flags.altFlag = false;
+                _flags.shiftFlag = false;
+                _flags.optFlag = !_flags.optFlag;
+                _flags.ctrlFlag = false;
+                delay(50);
+            } else if (status.ctrl) {
+                _flags.fnFlag = false;
+                _flags.altFlag = false;
+                _flags.shiftFlag = false;
+                _flags.optFlag = false;
+                _flags.ctrlFlag = !_flags.ctrlFlag;
                 delay(50);
             } else if (status.enter) {
                 // Handle enter key
@@ -242,14 +276,15 @@ void M5Terminal::handleKeyboardInput() {
             } else if (status.del) {
                 // Handle backspace/delete key
                 backSpaceInput();
-            } else if (!_fnFlag) {
-                // Handle other key presses
+            } else if (!_flags.altFlag && !_flags.ctrlFlag && !_flags.fnFlag && !_flags.optFlag) {
+                // Se a flag shift estiver ativada, converte a entrada para maiúsculas
+
                 for (auto key : status.word) {
                     refreshInput(String(key).c_str());
                 }
             }
         }
-    } else if (M5Cardputer.Keyboard.isPressed() && _fnFlag) {
+    } else if (M5Cardputer.Keyboard.isPressed() && _flags.fnFlag) {
         Keyboard_Class::KeysState fn = M5Cardputer.Keyboard.keysState();
         for (auto key : fn.word) {
             if (key == KEY_UP) {
@@ -268,12 +303,12 @@ void M5Terminal::handleKeyboardInput() {
 }
 
 void M5Terminal::drawFnIndicator() {
-    if (_fnFlag) {
-        // Define the position and size of the indicator
-        int indicatorWidth = 30;
-        int indicatorHeight = 15;
-        int x = _canvas->width() - indicatorWidth - 5;  // 5 pixels padding from the right edge
-        int y = 5;                                      // 5 pixels padding from the top edge
+    // Define the position and size of the indicator
+    int indicatorWidth = 40;
+    int indicatorHeight = 15;
+    int x = _canvas->width() - indicatorWidth - 10;  // 5 pixels padding from the right edge
+    int y = 5;                                       // 5 pixels padding from the top edge
+    if (_flags.fnFlag) {
         if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
             // Draw the background rectangle
             _canvas->fillRect(x, y, indicatorWidth, indicatorHeight, TFT_ORANGE);
@@ -286,6 +321,73 @@ void M5Terminal::drawFnIndicator() {
             _canvas->setTextColor(WHITE);
             _canvas->setTextSize(1);
             _canvas->drawString("FN", x + 5, y + 3);  // Position the text inside the rectangle
+            _canvas->setTextColor(_textColor);
+            xSemaphoreGive(_canvasMutex);
+        }
+    } else if (_flags.altFlag) {
+        if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+            // Draw the background rectangle
+            //_canvas->fillRect(x, y, indicatorWidth, indicatorHeight, TFT_ORANGE);
+
+            // Draw the border of the rectangle
+            _canvas->drawRect(x, y, indicatorWidth, indicatorHeight, TFT_WHITE);
+
+            // Draw the "FN" text inside the rectangle
+
+            _canvas->setTextColor(WHITE);
+            _canvas->setTextSize(1);
+            _canvas->drawString("ALT", x + 5, y + 3);  // Position the text inside the rectangle
+            _canvas->setTextColor(_textColor);
+            xSemaphoreGive(_canvasMutex);
+        }
+
+    } else if (_flags.ctrlFlag) {
+        if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+            // Draw the background rectangle
+            //_canvas->fillRect(x, y, indicatorWidth, indicatorHeight, TFT_ORANGE);
+
+            // Draw the border of the rectangle
+            _canvas->drawRect(x, y, indicatorWidth, indicatorHeight, TFT_WHITE);
+
+            // Draw the "FN" text inside the rectangle
+
+            _canvas->setTextColor(WHITE);
+            _canvas->setTextSize(1);
+            _canvas->drawString("CTRL", x + 5, y + 3);  // Position the text inside the rectangle
+            _canvas->setTextColor(_textColor);
+            xSemaphoreGive(_canvasMutex);
+        }
+
+    } else if (_flags.optFlag) {
+        if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+            // Draw the background rectangle
+            _canvas->fillRect(x, y, indicatorWidth, indicatorHeight, TFT_DARKGREEN);
+
+            // Draw the border of the rectangle
+            _canvas->drawRect(x, y, indicatorWidth, indicatorHeight, TFT_WHITE);
+
+            // Draw the "FN" text inside the rectangle
+
+            _canvas->setTextColor(WHITE);
+            _canvas->setTextSize(1);
+            _canvas->drawString("OPT", x + 5, y + 3);  // Position the text inside the rectangle
+            _canvas->setTextColor(_textColor);
+            xSemaphoreGive(_canvasMutex);
+        }
+
+    } else if (_flags.shiftFlag) {
+        if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+            // Draw the background rectangle
+            _canvas->fillRect(x, y, indicatorWidth, indicatorHeight, TFT_BLUE);
+
+            // Draw the border of the rectangle
+            _canvas->drawRect(x, y, indicatorWidth, indicatorHeight, TFT_WHITE);
+
+            // Draw the "FN" text inside the rectangle
+
+            _canvas->setTextColor(WHITE);
+            _canvas->setTextSize(1);
+            _canvas->drawString("SH", x + 5, y + 3);  // Position the text inside the rectangle
             _canvas->setTextColor(_textColor);
             xSemaphoreGive(_canvasMutex);
         }

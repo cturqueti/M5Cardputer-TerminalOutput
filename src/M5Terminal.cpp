@@ -19,12 +19,15 @@ M5Terminal::M5Terminal(M5Display* display) : _display(display), _startLine(0), _
 }
 
 void M5Terminal::begin() {
-    _canvas->fillSprite(_backgroundColor);
-    _canvas->createSprite(_display->width(), _display->height());
-    _canvas->setTextColor(_textColor, _backgroundColor);
-    _canvas->setFont(&fonts::DejaVu12);
-    _canvas->setTextScroll(true);
+    if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+        _canvas->fillSprite(_backgroundColor);
+        _canvas->createSprite(_display->width(), _display->height());
+        _canvas->setTextColor(_textColor, _backgroundColor);
+        _canvas->setFont(&fonts::DejaVu12);
+        _canvas->setTextScroll(true);
 
+        xSemaphoreGive(_canvasMutex);
+    }
     clear();
 }
 
@@ -141,13 +144,19 @@ void M5Terminal::autoScroll() {
 }
 
 void M5Terminal::updateCanvas() {
-    _canvas->fillScreen(TFT_BLACK);
+    if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+        _canvas->fillScreen(_backgroundColor);
+        xSemaphoreGive(_canvasMutex);
+    }
     updateOutputWindow();
     updateInputWindow();
     drawFnIndicator();
     drawFrame();
 
-    _canvas->pushSprite(0, 0);
+    if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+        _canvas->pushSprite(0, 0);
+        xSemaphoreGive(_canvasMutex);
+    }
 }
 
 void M5Terminal::updateInputWindow() {
@@ -155,11 +164,13 @@ void M5Terminal::updateInputWindow() {
 
     // Calculate the bottom line Y position of the display
     int y = _canvas->height() - _lineHeight;
-
-    if (!_inBuffer.empty()) {
-        _canvas->drawString(_inBuffer[0].c_str(), leftMargin - _scrollX, y);
-    } else {
-        _inBuffer.push_back(">");
+    if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+        if (!_inBuffer.empty()) {
+            _canvas->drawString(_inBuffer[0].c_str(), leftMargin - _scrollX, y);
+        } else {
+            _inBuffer.push_back(">");
+        }
+        xSemaphoreGive(_canvasMutex);
     }
 }
 
@@ -169,23 +180,28 @@ void M5Terminal::updateOutputWindow() {
     int y = 0;
 
     int numVisibleLines = _canvas->height() / _lineHeight;
-
-    for (int i = 0; i < (numVisibleLines - 1) && line < _outBuffer.size(); i++) {
-        if (_outBuffer[line].length() > 0) {
-            _canvas->drawString(_outBuffer[line].c_str(), leftMargin - _scrollX, y);  // Apply horizontal scrolling
+    if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+        for (int i = 0; i < (numVisibleLines - 1) && line < _outBuffer.size(); i++) {
+            if (_outBuffer[line].length() > 0) {
+                _canvas->drawString(_outBuffer[line].c_str(), leftMargin - _scrollX, y);  // Apply horizontal scrolling
+            }
+            line++;
+            y += _lineHeight;
         }
-        line++;
-        y += _lineHeight;
+        xSemaphoreGive(_canvasMutex);
     }
     drawScrollIndicator();
 }
 
 void M5Terminal::drawFrame() {
-    // Desenhar a moldura ao redor da área de saída de texto
-    _canvas->drawRect(0, 0, _canvas->width(), _canvas->height() - _lineHeight, _borderColor);
+    if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+        // Desenhar a moldura ao redor da área de saída de texto
+        _canvas->drawRect(0, 0, _canvas->width(), _canvas->height() - _lineHeight, _borderColor);
 
-    // Desenhar uma linha separadora entre a área de saída de texto e a linha de entrada de texto
-    _canvas->drawLine(0, _canvas->height() - _lineHeight, _canvas->width(), _canvas->height() - _lineHeight, _borderColor);
+        // Desenhar uma linha separadora entre a área de saída de texto e a linha de entrada de texto
+        _canvas->drawLine(0, _canvas->height() - _lineHeight, _canvas->width(), _canvas->height() - _lineHeight, _borderColor);
+        xSemaphoreGive(_canvasMutex);
+    }
 }
 
 void M5Terminal::drawScrollIndicator() {
@@ -198,16 +214,18 @@ void M5Terminal::drawScrollIndicator() {
     // Adjust the height of the scroll bar
     int indicatorHeight = map(numVisibleLines, 0, totalLines, 0, _canvas->height() - _lineHeight);
     int indicatorY = map(visibleStartLine, 0, totalLines - numVisibleLines, 0, _canvas->height() - _lineHeight - indicatorHeight);
+    if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+        // Clear the scroll bar area
+        _canvas->fillRect(_canvas->width() - 5, 0, 5, _canvas->height() - _lineHeight, TFT_BLACK);
 
-    // Clear the scroll bar area
-    _canvas->fillRect(_canvas->width() - 5, 0, 5, _canvas->height() - _lineHeight, TFT_BLACK);
+        // Draw the scroll bar
+        _canvas->fillRect(_canvas->width() - 5, indicatorY, 5, indicatorHeight, _scrollColor);
 
-    // Draw the scroll bar
-    _canvas->fillRect(_canvas->width() - 5, indicatorY, 5, indicatorHeight, _scrollColor);
-
-    // Add a border for visibility
-    _canvas->drawRect(_canvas->width() - 5, 0, 5, _canvas->height() - _lineHeight, _borderColor);
-    _canvas->drawRect(_canvas->width() - 5, indicatorY, 5, indicatorHeight, Color::toRgb565(0, 150, 150));
+        // Add a border for visibility
+        _canvas->drawRect(_canvas->width() - 5, 0, 5, _canvas->height() - _lineHeight, _borderColor);
+        _canvas->drawRect(_canvas->width() - 5, indicatorY, 5, indicatorHeight, Color::toRgb565(0, 150, 150));
+        xSemaphoreGive(_canvasMutex);
+    }
 }
 
 void M5Terminal::handleKeyboardInput() {
@@ -231,7 +249,6 @@ void M5Terminal::handleKeyboardInput() {
                 }
             }
         }
-        updateCanvas();
     } else if (M5Cardputer.Keyboard.isPressed() && _fnFlag) {
         Keyboard_Class::KeysState fn = M5Cardputer.Keyboard.keysState();
         for (auto key : fn.word) {
@@ -247,7 +264,7 @@ void M5Terminal::handleKeyboardInput() {
         }
     }
     M5Cardputer.update();
-    // updateCanvas();
+    updateCanvas();
 }
 
 void M5Terminal::drawFnIndicator() {
@@ -257,18 +274,20 @@ void M5Terminal::drawFnIndicator() {
         int indicatorHeight = 15;
         int x = _canvas->width() - indicatorWidth - 5;  // 5 pixels padding from the right edge
         int y = 5;                                      // 5 pixels padding from the top edge
+        if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+            // Draw the background rectangle
+            _canvas->fillRect(x, y, indicatorWidth, indicatorHeight, TFT_ORANGE);
 
-        // Draw the background rectangle
-        _canvas->fillRect(x, y, indicatorWidth, indicatorHeight, TFT_ORANGE);
+            // Draw the border of the rectangle
+            _canvas->drawRect(x, y, indicatorWidth, indicatorHeight, TFT_WHITE);
 
-        // Draw the border of the rectangle
-        _canvas->drawRect(x, y, indicatorWidth, indicatorHeight, TFT_WHITE);
+            // Draw the "FN" text inside the rectangle
 
-        // Draw the "FN" text inside the rectangle
-
-        _canvas->setTextColor(WHITE);
-        _canvas->setTextSize(1);
-        _canvas->drawString("FN", x + 5, y + 3);  // Position the text inside the rectangle
-        _canvas->setTextColor(_textColor);
+            _canvas->setTextColor(WHITE);
+            _canvas->setTextSize(1);
+            _canvas->drawString("FN", x + 5, y + 3);  // Position the text inside the rectangle
+            _canvas->setTextColor(_textColor);
+            xSemaphoreGive(_canvasMutex);
+        }
     }
 }

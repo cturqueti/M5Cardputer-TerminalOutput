@@ -2,13 +2,18 @@
   "name": "M5Terminal",
   "version": "1.0.0",
   "description": "A library for managing terminal-like display output on M5 devices.",
+  "keywords": "Terminal, scroll",
   "authors": [
     {
-      "name": "Seu Nome",
-      "email": "seu.email@example.com",
-      "url": "https://github.com/seu_usuario/seu_repositorio"
+      "name": "Carlos Augusto D'Orazio Turqueti",
+      "email": "cturqueti@yahoo.com.br",
+      "url": "https://github.com/cturqueti/M5Cardputer-TerminalOutput"
     }
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cturqueti/M5Cardputer-TerminalOutput.git"
+  },
   "license": "MIT",
   "frameworks": [
     "arduino"
@@ -16,7 +21,23 @@
   "platforms": [
     "espressif32"
   ],
+  "dependencies": [
+    {
+      "name": "m5stack/M5Cardputer",
+      "version": "^1.0.3"
+    }
+  ],
   "build": {
-    "srcFilter": "+<src/*.cpp>"
-  }
+    "srcFilter": "+<src/*.cpp>",
+    "flags": [
+      "-Os",
+      "-DCORE_DEBUG_LEVEL=5"
+    ]
+  },
+  "examples": [
+    {
+      "name": "Example1",
+      "path": "examples/terminal.cpp"
+    }
+  ]
 }

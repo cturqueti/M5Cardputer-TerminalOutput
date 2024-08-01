@@ -9,6 +9,11 @@
 
 #include "Color.h"
 
+#define KEY_UP ';'
+#define KEY_DOWN '.'
+#define KEY_LEFT ','
+#define KEY_RIGHT '/'
+
 // Verify the correct type; it might be M5GFX or another appropriate type
 typedef M5GFX M5Display;  // Adjust as necessary
 

@@ -3,11 +3,6 @@
 
 #include "M5Terminal.h"
 
-#define KEY_UP ';'
-#define KEY_DOWN '.'
-#define KEY_LEFT ','
-#define KEY_RIGHT '/'
-
 M5Terminal terminal(&M5Cardputer.Display);
 
 void setup() {

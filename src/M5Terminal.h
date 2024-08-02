@@ -70,7 +70,6 @@ class M5Terminal {
     void autoScroll();
     void drawScrollIndicator();
     void drawFnIndicator();
-    String toUpperCase(const String& str);
 };
 
 #endif  // M5TERMINAL_H

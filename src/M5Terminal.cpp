@@ -71,7 +71,7 @@ String M5Terminal::sendInput() {
         // Remove o primeiro caractere
         if (output.length() > 0) {
             output = output.substring(1);
-        }
+                }
         return output;
     }
     return "";

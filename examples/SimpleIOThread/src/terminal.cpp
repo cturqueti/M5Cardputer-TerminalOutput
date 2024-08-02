@@ -33,6 +33,7 @@ void loop() {
         terminal.print("Counter: ");
         terminal.println(String(counter).c_str());
         counter++;
+        std::cout << "Olá, mundo!" << std::endl;
         if (counter == 29) {
             terminal.println("Testing line length and left and right");
         }

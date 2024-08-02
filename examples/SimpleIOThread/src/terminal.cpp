@@ -17,7 +17,6 @@ void setup() {
     auto cfg = M5.config();
     M5Cardputer.begin(cfg);
 
-    Serial.begin(115200);
     terminal.begin();
     terminal.clear();
     terminal.println("Terminal test");
@@ -33,7 +32,9 @@ void loop() {
         terminal.print("Counter: ");
         terminal.println(String(counter).c_str());
         counter++;
-        std::cout << "Olá, mundo!" << std::endl;
+        std::cout
+            << "Olá, mundo!" << std::endl;
+
         if (counter == 29) {
             terminal.println("Testing line length and left and right");
         }

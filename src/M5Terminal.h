@@ -28,6 +28,7 @@ typedef M5GFX M5Display;  // Adjust as necessary
 class M5Terminal {
    public:
     M5Terminal(M5Display* display);
+    ~M5Terminal();
     void begin();
     void print(const char* text);
     void println(const char* text);
@@ -43,6 +44,8 @@ class M5Terminal {
     void drawFrame();
     void updateCanvas();
     void handleKeyboardInput();
+    int available(void);
+    void read();
 
    private:
     M5Display* _display;  // Adjust to M5Display
@@ -62,7 +65,7 @@ class M5Terminal {
     uint16_t _backgroundColor = Color::toRgb565(0, 0, 0);
     uint16_t _borderColor = Color::toRgb565(192, 192, 192);
     uint16_t _scrollColor = Color::toRgb565(0, 200, 150);
-    SemaphoreHandle_t _canvasMutex;
+    SemaphoreHandle_t _lock;
 
     void
     updateOutputWindow();

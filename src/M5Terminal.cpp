@@ -1,5 +1,8 @@
 #include "M5Terminal.h"
 
+void terminalEvent(void) __attribute__((weak));
+void terminalEvent(void) {}
+
 M5Terminal::M5Terminal(M5Display* display) : _display(display), _startLine(0), _lineHeight(12) {
     _display->setRotation(1);
     if (_display->isEPD()) {
@@ -11,22 +14,33 @@ M5Terminal::M5Terminal(M5Display* display) : _display(display), _startLine(0), _
         _display->setRotation(_display->getRotation() ^ 1);
     }
     _canvas = new M5Canvas(_display);
-    _canvasMutex = xSemaphoreCreateMutex();  // Create a mutex
-    if (_canvasMutex == NULL) {
-        Serial.println("Failed to create mutex");
+    _lock = xSemaphoreCreateMutex();  // Create a mutex
+    if (_lock == NULL) {
+        std::cout
+            << "Failed to create mutex" << std::endl;
+
         // Handle the error
     }
 }
 
+M5Terminal::~M5Terminal() {
+    // end();  // explicit Full UART termination
+#if !CONFIG_DISABLE_HAL_LOCKS
+    if (_lock != NULL) {
+        vSemaphoreDelete(_lock);
+    }
+#endif
+}
+
 void M5Terminal::begin() {
-    if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+    if (xSemaphoreTake(_lock, portMAX_DELAY) == pdTRUE) {
         _canvas->fillSprite(_backgroundColor);
         _canvas->createSprite(_display->width(), _display->height());
         _canvas->setTextColor(_textColor, _backgroundColor);
         _canvas->setFont(&fonts::DejaVu12);
         _canvas->setTextScroll(true);
 
-        xSemaphoreGive(_canvasMutex);
+        xSemaphoreGive(_lock);
     }
     clear();
 }
@@ -71,7 +85,7 @@ String M5Terminal::sendInput() {
         // Remove o primeiro caractere
         if (output.length() > 0) {
             output = output.substring(1);
-                }
+        }
         return output;
     }
     return "";
@@ -144,18 +158,18 @@ void M5Terminal::autoScroll() {
 }
 
 void M5Terminal::updateCanvas() {
-    if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+    if (xSemaphoreTake(_lock, portMAX_DELAY) == pdTRUE) {
         _canvas->fillScreen(_backgroundColor);
-        xSemaphoreGive(_canvasMutex);
+        xSemaphoreGive(_lock);
     }
     updateOutputWindow();
     updateInputWindow();
     drawFnIndicator();
     drawFrame();
 
-    if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+    if (xSemaphoreTake(_lock, portMAX_DELAY) == pdTRUE) {
         _canvas->pushSprite(0, 0);
-        xSemaphoreGive(_canvasMutex);
+        xSemaphoreGive(_lock);
     }
 }
 
@@ -164,13 +178,13 @@ void M5Terminal::updateInputWindow() {
 
     // Calculate the bottom line Y position of the display
     int y = _canvas->height() - _lineHeight;
-    if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+    if (xSemaphoreTake(_lock, portMAX_DELAY) == pdTRUE) {
         if (!_inBuffer.empty()) {
             _canvas->drawString(_inBuffer[0].c_str(), leftMargin - _scrollX, y);
         } else {
             _inBuffer.push_back(">");
         }
-        xSemaphoreGive(_canvasMutex);
+        xSemaphoreGive(_lock);
     }
 }
 
@@ -180,7 +194,7 @@ void M5Terminal::updateOutputWindow() {
     int y = 0;
 
     int numVisibleLines = _canvas->height() / _lineHeight;
-    if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+    if (xSemaphoreTake(_lock, portMAX_DELAY) == pdTRUE) {
         for (int i = 0; i < (numVisibleLines - 1) && line < _outBuffer.size(); i++) {
             if (_outBuffer[line].length() > 0) {
                 _canvas->drawString(_outBuffer[line].c_str(), leftMargin - _scrollX, y);  // Apply horizontal scrolling
@@ -188,19 +202,19 @@ void M5Terminal::updateOutputWindow() {
             line++;
             y += _lineHeight;
         }
-        xSemaphoreGive(_canvasMutex);
+        xSemaphoreGive(_lock);
     }
     drawScrollIndicator();
 }
 
 void M5Terminal::drawFrame() {
-    if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+    if (xSemaphoreTake(_lock, portMAX_DELAY) == pdTRUE) {
         // Desenhar a moldura ao redor da área de saída de texto
         _canvas->drawRect(0, 0, _canvas->width(), _canvas->height() - _lineHeight, _borderColor);
 
         // Desenhar uma linha separadora entre a área de saída de texto e a linha de entrada de texto
         _canvas->drawLine(0, _canvas->height() - _lineHeight, _canvas->width(), _canvas->height() - _lineHeight, _borderColor);
-        xSemaphoreGive(_canvasMutex);
+        xSemaphoreGive(_lock);
     }
 }
 
@@ -214,7 +228,7 @@ void M5Terminal::drawScrollIndicator() {
     // Adjust the height of the scroll bar
     int indicatorHeight = map(numVisibleLines, 0, totalLines, 0, _canvas->height() - _lineHeight);
     int indicatorY = map(visibleStartLine, 0, totalLines - numVisibleLines, 0, _canvas->height() - _lineHeight - indicatorHeight);
-    if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+    if (xSemaphoreTake(_lock, portMAX_DELAY) == pdTRUE) {
         // Clear the scroll bar area
         _canvas->fillRect(_canvas->width() - 5, 0, 5, _canvas->height() - _lineHeight, TFT_BLACK);
 
@@ -224,7 +238,7 @@ void M5Terminal::drawScrollIndicator() {
         // Add a border for visibility
         _canvas->drawRect(_canvas->width() - 5, 0, 5, _canvas->height() - _lineHeight, _borderColor);
         _canvas->drawRect(_canvas->width() - 5, indicatorY, 5, indicatorHeight, Color::toRgb565(0, 150, 150));
-        xSemaphoreGive(_canvasMutex);
+        xSemaphoreGive(_lock);
     }
 }
 
@@ -309,7 +323,7 @@ void M5Terminal::drawFnIndicator() {
     int x = _canvas->width() - indicatorWidth - 10;  // 5 pixels padding from the right edge
     int y = 5;                                       // 5 pixels padding from the top edge
     if (_flags.fnFlag) {
-        if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+        if (xSemaphoreTake(_lock, portMAX_DELAY) == pdTRUE) {
             // Draw the background rectangle
             _canvas->fillRect(x, y, indicatorWidth, indicatorHeight, TFT_ORANGE);
 
@@ -322,10 +336,10 @@ void M5Terminal::drawFnIndicator() {
             _canvas->setTextSize(1);
             _canvas->drawString("FN", x + 5, y + 3);  // Position the text inside the rectangle
             _canvas->setTextColor(_textColor);
-            xSemaphoreGive(_canvasMutex);
+            xSemaphoreGive(_lock);
         }
     } else if (_flags.altFlag) {
-        if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+        if (xSemaphoreTake(_lock, portMAX_DELAY) == pdTRUE) {
             // Draw the background rectangle
             //_canvas->fillRect(x, y, indicatorWidth, indicatorHeight, TFT_ORANGE);
 
@@ -338,11 +352,11 @@ void M5Terminal::drawFnIndicator() {
             _canvas->setTextSize(1);
             _canvas->drawString("ALT", x + 5, y + 3);  // Position the text inside the rectangle
             _canvas->setTextColor(_textColor);
-            xSemaphoreGive(_canvasMutex);
+            xSemaphoreGive(_lock);
         }
 
     } else if (_flags.ctrlFlag) {
-        if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+        if (xSemaphoreTake(_lock, portMAX_DELAY) == pdTRUE) {
             // Draw the background rectangle
             //_canvas->fillRect(x, y, indicatorWidth, indicatorHeight, TFT_ORANGE);
 
@@ -355,11 +369,11 @@ void M5Terminal::drawFnIndicator() {
             _canvas->setTextSize(1);
             _canvas->drawString("CTRL", x + 5, y + 3);  // Position the text inside the rectangle
             _canvas->setTextColor(_textColor);
-            xSemaphoreGive(_canvasMutex);
+            xSemaphoreGive(_lock);
         }
 
     } else if (_flags.optFlag) {
-        if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+        if (xSemaphoreTake(_lock, portMAX_DELAY) == pdTRUE) {
             // Draw the background rectangle
             _canvas->fillRect(x, y, indicatorWidth, indicatorHeight, TFT_DARKGREEN);
 
@@ -372,11 +386,11 @@ void M5Terminal::drawFnIndicator() {
             _canvas->setTextSize(1);
             _canvas->drawString("OPT", x + 5, y + 3);  // Position the text inside the rectangle
             _canvas->setTextColor(_textColor);
-            xSemaphoreGive(_canvasMutex);
+            xSemaphoreGive(_lock);
         }
 
     } else if (_flags.shiftFlag) {
-        if (xSemaphoreTake(_canvasMutex, portMAX_DELAY) == pdTRUE) {
+        if (xSemaphoreTake(_lock, portMAX_DELAY) == pdTRUE) {
             // Draw the background rectangle
             _canvas->fillRect(x, y, indicatorWidth, indicatorHeight, TFT_BLUE);
 
@@ -389,7 +403,14 @@ void M5Terminal::drawFnIndicator() {
             _canvas->setTextSize(1);
             _canvas->drawString("SH", x + 5, y + 3);  // Position the text inside the rectangle
             _canvas->setTextColor(_textColor);
-            xSemaphoreGive(_canvasMutex);
+            xSemaphoreGive(_lock);
         }
     }
+}
+
+int M5Terminal::available(void) {
+    return 0;
+}
+
+void M5Terminal::read() {
 }
